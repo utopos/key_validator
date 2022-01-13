@@ -73,7 +73,7 @@ by adding `field_validator` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:field_validator, "~> 0.1.0"}
+    {:field_validator, git: "https://github.com/utopos/field_validator"}
   ]
 end
 ```
