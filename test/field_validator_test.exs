@@ -12,8 +12,8 @@ defmodule FieldValidatorTest do
   doctest FieldValidator
 
   describe "for_struct/2 " do
-    test "raise CompileError on non existent key in the struct" do
-      assert_raise CompileError,
+    test "raise KeyError on non-existent key in the struct" do
+      assert_raise KeyError, ~r/Key :non_existent_key not found in [\w\.]+/,
                    fn ->
                      defmodule Posts do
                        import FieldValidator
@@ -22,8 +22,8 @@ defmodule FieldValidatorTest do
                    end
     end
 
-    test "raise CompileError when module is not a defstruct module" do
-      assert_raise CompileError, ~r/Module [\w\.]+ is not a struct/, fn ->
+    test "raise KeyError when module is not a defstruct module" do
+      assert_raise KeyError, ~r/Module [\w\.]+ is not a struct module/, fn ->
         defmodule Posts do
           import FieldValidator
           for_struct(SimpleModule, %{non_existent_key: 1})
@@ -33,10 +33,10 @@ defmodule FieldValidatorTest do
 
     test "successful validation " do
       require FieldValidator
-      FieldValidator.for_struct(Post, %{author: "Jakub"})
-      FieldValidator.for_struct(%Post{}, %{author: "Jakub"})
-      FieldValidator.for_struct(Post, author: "Jakub")
-      FieldValidator.for_struct(%Post{}, author: "Jakub")
+      assert %{author: "Jakub"} == FieldValidator.for_struct(Post, %{author: "Jakub"})
+      assert %{author: "Jakub"} == FieldValidator.for_struct(%Post{}, %{author: "Jakub"})
+      assert [author: "Jakub"] == FieldValidator.for_struct(Post, author: "Jakub")
+      assert [author: "Jakub"] == FieldValidator.for_struct(%Post{}, author: "Jakub")
     end
   end
 end
