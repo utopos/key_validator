@@ -1,14 +1,36 @@
 # FieldValidator
 
-Validates at compile time conformity between given struct and fields keys.
+Validates at compile-time conformity between given struct module and fields keys.
 
-- `struct` argument may be an atom (which defines defstruct) or a struct literal (%MyStruct{}).
-- `fields` argument may be a `map` or `keyword` **literal**.
+- `module` : atom (which defines defstruct).
+- `fields` : map or keyword **literal**.
 
-Validation is done at compile time by ensuring all the fields keys are found in the struct.
 
-Returns `fields` when all the field keys are included in the `struct`.
-Raises `KeyError` at compile-time a fields key is not found in `struct` keys.
+Returns `fields` when all the keys in`fields are included in the struct.
+
+Raises:
+
+- `KeyError` when any key in the fields is not found in struct.
+- `ArgumentError` when
+  + `fields` are not a map/keyword literal
+  + `module` is not a module atom
+  + `module` is not a module atom that defines defstruct
+  
+## Examples
+
+```elixir
+    iex> require FieldValidator
+    FieldValidator
+
+    iex> import Post
+    Post
+
+    iex> FieldValidator.for_struct(Post, %{author: "Jakub"})
+    %{author: "Jakub"}
+
+    iex> FieldValidator.for_struct(Post, author: "Jakub")
+    [author: "Jakub"]
+```
 
 ## Examples
 
@@ -82,8 +104,8 @@ def deps do
   ]
 end
 ```
-
+<!-- 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/field_validator>.
-
+-->
