@@ -41,14 +41,14 @@ defmodule KeyValidatorTest do
     end
 
     test "raise ArgumentError when fields not a map or keyword literal" do
-      assert_raise ArgumentError, ~r/Fields argument must be map or key literal./, fn ->
+      assert_raise ArgumentError, ~r/Fields argument must be map or keyword literal./, fn ->
         defmodule Posts do
           import KeyValidator
           for_struct(Post, 123)
         end
       end
 
-      assert_raise ArgumentError, ~r/Fields argument must be map or key literal./, fn ->
+      assert_raise ArgumentError, ~r/Fields argument must be map or keyword literal./, fn ->
         defmodule Posts do
           import KeyValidator
           for_struct(Post, [2, 123])

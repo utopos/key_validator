@@ -1,6 +1,7 @@
 defmodule KeyValidator do
   @moduledoc """
-  Validation of all the map/keyword keys exist in the target struct at compile-time.
+  Compile-time validation to assure all the map/keyword keys exist in the target struct.
+  Use case: maps that will be merged with structs.
 
   Library proivdes compile-time check macro for key validity of map/keyword keys for merge with structs.
 
@@ -12,8 +13,8 @@ defmodule KeyValidator do
 
   Elixir and Ecto has built-in functions that perform the key validity check, but only at runtime:
 
-  `Kernel.struct!/2`
-  `Ecto.Query.API.merge/2`
+  - `Kernel.struct!/2`
+  - `Ecto.Query.API.merge/2`
 
   In certain situations, the conformity between map/keyword keys can be checked already at the compile-time. One example is when we have present map/keyword **literals** in our code that we know ahead that will be used for casting onto structs. Let's take a look at the following example:
 
@@ -56,7 +57,7 @@ defmodule KeyValidator do
   #=>** (KeyError) Key :name_e not found in User
   ```
 
-  As we can see `for_struct/2` macro allows some category of errors to be caught at very early stage in development workflow. No need to wait the code to crash at runtime if there's a opportunity to check the key conformity before that. This is not a silver bullet though, as it  `for_struct/2` cannot accept dynamic variables, becauce their content cannot be evaluated during the runtime.
+  As we can see `for_struct/2` macro allows some category of errors to be caught at very early stage in the development workflow. No need to wait the code to crash at runtime if there's a opportunity to check the key conformity before that. This is not a silver bullet though: the macro cannot accept dynamic variables, because their content cannot be evaluated during compilation.
 
   ## Extended example
 
@@ -139,7 +140,7 @@ defmodule KeyValidator do
       ** (KeyError) Key :auth_typo_or not found in Elixir.Post
 
       iex> for_struct(ModuleWithNoStruct, %{author: "Jakub"})
-      * (ArgumentError) Argument is not a module that defines a struct.
+      ** (ArgumentError) Argument is not a module that defines a struct.
 
   """
   defmacro for_struct(module_or_struct, fields) do
@@ -206,7 +207,7 @@ defmodule KeyValidator do
 
   defp raise_keywords_argument_error(_keywords) do
     raise ArgumentError,
-      message: "Fields argument must be map or key literal."
+      message: "Fields argument must be map or keyword literal."
   end
 
   defp raise_struct_argument_error(_term) do

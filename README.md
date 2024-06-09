@@ -1,8 +1,6 @@
 # Key Validator
 
-Validation of all the map/keyword keys exist in the target struct at compile-time.
-
-Library proivdes compile-time check macro for key validity of map/keyword keys for merge with structs.
+Compile-time validation to assure all the map/keyword keys exist in the target struct. Use case: maps that will be merged with structs.
 
 Exposes the `KeyValidator.for_struct/2` macro.
 
@@ -18,14 +16,22 @@ def deps do
 end
 ```
 
+## Testing
+
+Library ready for testing:
+
+```bash
+mix test
+```
+
 ## Use cases
 
 The macro targets the situations where working with map/keyword literals that will be later cast onto the known structs.
 
 Elixir and Ecto has built-in functions that perform the key validity check, but only at runtime:
 
-`Kernel.struct!/2`
-`Ecto.Query.API.merge/2`
+- `Kernel.struct!/2`
+- `Ecto.Query.API.merge/2`
 
 In certain situations, the conformity between map/keyword keys can be checked already at the compile-time. One example is when we have present map/keyword **literals** in our code that we know ahead that will be used for casting onto structs. Let's take a look at the following example:
 
@@ -68,7 +74,7 @@ user_map2 = for_struct(User, %{nam__e: "Jakub"})
 #=>** (KeyError) Key :name_e not found in User
 ```
 
-As we can see `for_struct/2` macro allows some category of errors to be caught at very early stage in development workflow. No need to wait the code to crash at runtime if there's a opportunity to check the key conformity before that. This is not a silver bullet though, as it  `for_struct/2` cannot accept dynamic variables, becauce their content cannot be evaluated during the runtime.
+As we can see `for_struct/2` macro allows some category of errors to be caught at very early stage in the development workflow. No need to wait the code to crash at runtime if there's a opportunity to check the key conformity before that. This is not a silver bullet though: the macro cannot accept dynamic variables, because their content cannot be evaluated during compilation.
 
 ## Extended example
 
@@ -108,3 +114,5 @@ Post
   end
 end
 ```
+
+
