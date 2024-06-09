@@ -1,13 +1,23 @@
-defmodule FieldValidator.MixProject do
+defmodule KeyValidator.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :field_validator,
-      version: "0.1.1",
-      elixir: "~> 1.13",
+      app: :key_validator,
+      version: "0.1.0",
+      elixir: "~> 1.16.0",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      # Docs
+      name: "KeyValidator",
+      description:
+        "Compile-time check for key validity of map/keyword keys for merge with structs.",
+      package: package(),
+      source_url: "https://github.com/utopos/key_validator",
+      docs: [
+        # The main page in the docs
+        main: "KeyValidator"
+      ]
     ]
   end
 
@@ -20,9 +30,16 @@ defmodule FieldValidator.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
+    []
+  end
+
+  def package() do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      maintainers: ["Jakub Lambrych"],
+      licenses: ["MIT"],
+      links: %{
+        GitHub: "https://github.com/utopos/key_validator"
+      }
     ]
   end
 end

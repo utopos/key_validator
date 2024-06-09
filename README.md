@@ -1,111 +1,110 @@
-# FieldValidator
+# Key Validator
 
-Validates at compile-time conformity between given struct module and fields keys.
+Validation of all the map/keyword keys exist in the target struct at compile-time.
 
-- `module` : atom (which defines defstruct).
-- `fields` : map or keyword **literal**.
+Library proivdes compile-time check macro for key validity of map/keyword keys for merge with structs.
 
+Exposes the `KeyValidator.for_struct/2` macro.
 
-Returns `fields` when all the keys in`fields are included in the struct.
+# Installation
 
-Raises:
-
-- `KeyError` when any key in the fields is not found in struct.
-- `ArgumentError` when
-  + `fields` are not a map/keyword literal
-  + `module` is not a module atom
-  + `module` is not a module atom that defines defstruct
-  
-## Examples
-
-```elixir
-    iex> require FieldValidator
-    FieldValidator
-
-    iex> import Post
-    Post
-
-    iex> FieldValidator.for_struct(Post, %{author: "Jakub"})
-    %{author: "Jakub"}
-
-    iex> FieldValidator.for_struct(Post, author: "Jakub")
-    [author: "Jakub"]
-```
-
-## Examples
-
-```elixir
-
-    iex> require FieldValidator
-    FieldValidator
-
-    iex> import Post
-    Post
-
-    iex> FieldValidator.for_struct(Post, %{author: "Jakub"})
-    %{author: "Jakub"}
-
-    iex> FieldValidator.for_struct(%Post{}, %{author: "Jakub"})
-    %{author: "Jakub"}
-
-    iex> FieldValidator.for_struct(Post, author: "Jakub")
-    [author: "Jakub"]
-
-    iex> FieldValidator.for_struct(%Post{}, author: "Jakub")
-    [author: "Jakub"]  
-```
-
-## Extended example
-
-```elixir
-  defmodule Post do
-    use Ecto.Schema
-    schema "posts" do
-      field :author_firstname, :string
-      field :author_lastname, :string
-      field :author, :string, virtual_field: true
-    end
-  end
-
-  defmodule Posts do
-    import FieldValidator
-
-    def list_posts do
-      Post
-      |> select_merge([p], for_struct(Post, %{author: p.author_firstname <> " " <> p.author_lastname}))
-      |> Repo.all()
-    end
-  end
-
-
-  The following code will raise a Key Error with message: "Key :author_non_existent_key not found in Post"
-
-  defmodule Posts do
-    import FieldValidator
-
-    def list_posts_error do
-        Post
-        |> select_merge([p], for_struct(Post, %{author_non_existent_key: "some value"}))
-        |> Repo.all()
-      end
-    end
-```
-"""
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `field_validator` to your list of dependencies in `mix.exs`:
+The package can be installed by adding live_stream_async to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
   [
-    {:field_validator, git: "https://github.com/utopos/field_validator"}
+    {:key_validator, "~> 0.1.0", runtime: false}
   ]
 end
 ```
-<!-- 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/field_validator>.
--->
+
+## Use cases
+
+The macro targets the situations where working with map/keyword literals that will be later cast onto the known structs.
+
+Elixir and Ecto has built-in functions that perform the key validity check, but only at runtime:
+
+`Kernel.struct!/2`
+`Ecto.Query.API.merge/2`
+
+In certain situations, the conformity between map/keyword keys can be checked already at the compile-time. One example is when we have present map/keyword **literals** in our code that we know ahead that will be used for casting onto structs. Let's take a look at the following example:
+
+```elixir
+defmodule User do
+defstruct name: "john"
+end
+
+# Following line is a runtime only check:
+
+Kernel.struct!(User, %{name: "Jakub"})
+#=> %User{name: "Jakub"}
+
+# Runtime error on key typo:
+
+Kernel.struct!(User, %{nam__e: "Jakub"})
+#=> ** (KeyError) key :nam__e not found
+```
+
+The expression `Kernel.struct!(User, %{name: "Jakub"})` uses a map literal (`%{name: "Jakub"}`). Since the User struct module together with the map literal is defined at the compile time, we can leverage the power of compile-time macros to validate those. This is where `KeyValidator.for_struct/2` comes to help:
+
+```elixir
+defmodule User do
+defstruct name: "john"
+end
+
+import KeyValidator
+
+# Succesfull validation. Returns the map:
+
+user_map = for_struct(User, %{name: "Jakub"})
+#=> %{name: "Jakub"}
+
+Kernel.struct!(User, user_map)
+#=> %User{name: "Jakub"}
+
+# Compile time error on "nam__e:" key typo
+
+user_map2 = for_struct(User, %{nam__e: "Jakub"})
+#=>** (KeyError) Key :name_e not found in User
+```
+
+As we can see `for_struct/2` macro allows some category of errors to be caught at very early stage in development workflow. No need to wait the code to crash at runtime if there's a opportunity to check the key conformity before that. This is not a silver bullet though, as it  `for_struct/2` cannot accept dynamic variables, becauce their content cannot be evaluated during the runtime.
+
+## Extended example
+
+Useful to work with Ecto.Query.select_merge/3 when working with `virtual_fields`
+
+```elixir
+defmodule Post do
+use Ecto.Schema
+schema "posts" do
+  field :author_firstname, :string
+  field :author_lastname, :string
+  field :author, :string, virtual_field: true
+end
+end
+
+defmodule Posts do
+import KeyValidator
+
+def list_posts do
+  Post
+  |> select_merge([p], for_struct(Post, %{author: p.author_firstname <> " " <> p.author_lastname}))
+  |> Repo.all()
+end
+end
+```
+
+The following code will raise a Key Error with message: "Key :author_non_existent_key not found in Post"
+
+```elixir
+defmodule Posts do
+import KeyValidator
+
+def list_posts_error do
+Post
+|> select_merge([p], for_struct(Post, %{author_non_existent_key: "some value"}))
+|> Repo.all()
+  end
+end
+```
