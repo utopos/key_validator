@@ -4,51 +4,47 @@ defmodule FieldValidator do
   """
 
   @doc """
-  Validates at compile-time conformity between given struct module and fields keys.
+    Validates at compile-time conformity between given struct module and fields keys.
 
-  - `module` : atom (which defines defstruct).
-  - `fields` : map or keyword **literal**.
-
-
-  Returns `fields` when all the keys in`fields are included in the struct.
-
-  Raises:
-
-  - `KeyError` when any key in the fields is not found in struct.
-  - `ArgumentError` when
-    + `fields` are not a map/keyword literal
-    + `module` is not a module atom
-    + `module` is not a module atom that defines defstruct
-
-  ## Examples
+    - `module_or_struct` : Module atom (which defines defstruct) or struct (ex. %ModuleStruct{}).
+    - `fields` : map or keyword **literal**.
 
 
-    iex> require FieldValidator
-    FieldValidator
+    Returns `fields` when all the keys in`fields are included in the struct.
 
-    iex> import Post
-    Post
+    Raises:
 
-    iex> FieldValidator.for_struct(Post, %{author: "Jakub"})
-    %{author: "Jakub"}
+    - `KeyError` when any key in the fields is not found in struct.
+    - `ArgumentError` when
+      + `fields` are not a map/keyword literal
+      + `module` is not a module atom that defines defstruct
 
-    iex> FieldValidator.for_struct(Post, author: "Jakub")
-    [author: "Jakub"]
+    ## Examples
 
-"""
 
-  defmacro for_struct(module, fields) do
+      iex> require FieldValidator
+      FieldValidator
+
+      iex> import Post
+      Post
+
+      iex> FieldValidator.for_struct(Post, %{author: "Jakub"})
+      %{author: "Jakub"}
+
+      iex> FieldValidator.for_struct(Post, author: "Jakub")
+      [author: "Jakub"]
+
+  """
+  defmacro for_struct(module_or_struct, fields) do
     try do
-
       defstruct_module =
-        module
+        module_or_struct
         |> Macro.expand(__CALLER__)
-        |> validate_module()
-        |> validate_struct_module()
+        |> assert_is_struct(__CALLER__)
 
-        fields
-        |> get_keywords()
-        |> validate_keywords(defstruct_module)
+      fields
+      |> assert_keyword()
+      |> validate_keyword(defstruct_module)
 
       fields
     rescue
@@ -61,42 +57,32 @@ defmodule FieldValidator do
   # PRIVATE HELPERS #
   ###################
 
-  defp validate_module(module_atom) when is_atom(module_atom) do
-    try do
-      module_atom.__info__(:functions)
-      module_atom
-    rescue
-      UndefinedFunctionError ->
-        raise_not_module_argument_error()
+  defp assert_is_struct({:%, _, [module, _fields]}, env) do
+    module_atom = Macro.expand(module, env)
+    assert_is_struct(module_atom, env)
+  end
+
+  defp assert_is_struct(module_atom, _env) when is_atom(module_atom) do
+    case function_exported?(module_atom, :__struct__, 0) do
+      true -> module_atom
+      false -> raise_struct_argument_error(module_atom)
     end
   end
 
-  defp validate_module(_module_atom), do: raise_not_module_argument_error()
+  defp assert_is_struct(term, _env) do
+    raise_struct_argument_error(term)
+  end
 
+  defp assert_keyword({:%{}, _metadata, keywords}), do: assert_keyword(keywords)
 
-  defp get_keywords({:%{}, _metadata, keywords}), do: get_keywords(keywords)
-
-  defp get_keywords(keywords) do
+  defp assert_keyword(keywords) do
     case Keyword.keyword?(keywords) do
       true -> keywords
       false -> raise_keywords_argument_error(keywords)
     end
   end
 
-
-
-  defp validate_struct_module(module) do
-    is_struct_module? =
-      module.__info__(:functions)
-      |> Keyword.has_key?(:__struct__)
-
-    case is_struct_module? do
-      true -> module
-      false -> raise_struct_argument_error(module)
-    end
-  end
-
-  defp validate_keywords(keywords, module) do
+  defp validate_keyword(keywords, module) do
     struct_keys = Map.keys(module.__struct__())
 
     keywords
@@ -111,14 +97,13 @@ defmodule FieldValidator do
   end
 
   defp raise_keywords_argument_error(keywords) do
-    raise ArgumentError, message: "Fields argument must be map or key literal. Found: #{inspect(keywords)}"
+    raise ArgumentError,
+      message: "Fields argument must be map or key literal. Found: #{inspect(keywords)}"
   end
 
-  defp raise_not_module_argument_error() do
-    raise ArgumentError, message: "Argument must be a module"
-  end
-
-  defp raise_struct_argument_error(module) do
-    raise ArgumentError, message: "Module #{module} is not a struct module"
+  defp raise_struct_argument_error(term) do
+    raise ArgumentError,
+      message:
+        "Argument is not a module does that defines a struct. Instead found: #{Macro.escape(term)}"
   end
 end
